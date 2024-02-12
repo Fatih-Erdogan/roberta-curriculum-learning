@@ -1,4 +1,36 @@
-# COMP442-FinalProject
+# Curriculum Learning with RoBERTa
+
+Human brain is developing gradually. New connections are established between the neurons and the perception of already acquired knowledge is subject to change. Therefore, one can conclude that the learning process of humans involves first capturing the essence of the subject and then delving into its deeper intricacies and complexities. Having the motivation from this natural learning process, I developed three RoBERTa models for each learning phase with different parameter sizes. From the HuggingFace transformers library I used RobertaForMaskedLM as the template model and used ByteLevelBPETokenizer from tokenizers library to create a customized tokenizer. You can find the model and training related hyperparameters at in the following Table.
+
+| **Parameter**       | **Phase 1** | **Phase 2** | **Phase 3** |
+|---------------------|-------------|-------------|-------------|
+| **voc_size**        | 5334        | 15334       | 30334       |
+| **# of layers**     | 3           | 6           | 12          |
+| **hidden size**     | 192         | 384         | 768         |
+| **FFN in. hid. s.** | 768         | 1536        | 3072        |
+| **# of self-att_h** | 3           | 6           | 12          |
+| **att. head size**  | 64          | 64          | 64          |
+| **dropuut**         | 0.1         | 0.1         | 0.1         |
+| **att. dropout**    | 0.1         | 0.1         | 0.1         |
+| **batch size**      | 64          | 64          | 32          |
+| **epochs**          | 10          | 5           | 5           |
+| **max seq. len.**   | 512         | 512         | 512         |
+| **acc. steps**      | 4           | 4           | 4           |
+| **mlm prob.**       | 0.15        | 0.15        | 0.15        |
+| **optimizer**       | AdamW       | AdamW       | AdamW       |
+| **scheduler**       | lin.        | lin.        | lin.        |
+| **max lr.**         | 5e-5        | 5e-5        | 5e-5        |
+
+The reason behind the choice of byte level BPE tokenization is that it is more intuitive to initially learn the most common character combinations appearing together and also the original RoBERTa model (Liu et al., 2019) used this tokenization. Due to the compatibility issues, I converted this customised tokenizer to RobertaTokenizer. During the transition between the phases, the parameters of the previous model is copied to related positions at the subsequent model. The following Figure illustrates the general idea used for initializing the parameters of the following model.
+
+![Initialization of the word embedding matrix for the subsequent model](images/expansion.png)
+
+This method is applied for each one of the embedding layer, encoder layers (for the ones that existed in the previous model), and language model head layer parameters. Differing from the oth- ers parameter sets, I used a special initialization technique for the word embeddings and the de- coder of the language model head layer. The idea behind this method is that the token which is obtained from the combination of two subtokens would carry similar information to both of the tokens that it is constructed from. This may be not useful for the first some number of merges as they are likely to carry generic information in their embeddings, but after a number of merges, it is likely that the embeddings of the subtokens can be a good starting point for the new tokens.
+To achieve the mentioned operations and to have a consistency between the previous and subsequent models, the construction of the tokenizer plays a significant role. For a new phase, the new model is created with an extended vocabulary. The token indices of the previous model must remain the same for the next model so that the initialization method that I mentioned make sense. To achieve that, I applied the byte level BPE to the same training corpus which is composed of all training files.
+I increased the number of self-attention heads proportional to the hidden size (word embedding size). The idea behind this choice is again ensuring the compatibility between the previous and next model. During the training of a model, each attention head focuses on a specific part of the word embeddings. Therefore by increasing the number of heads proportional to the embedding size, I aimed to keep the attention head size constant between the phases. Thus, even though the results of each head is affected from the dimensional increase in the input, at least the portion of the input vector inherited from the previous phase interacts with the attention parameters of it.
+
+
+## Notebook
 
 The provided notebook contains the code necessary to create a language model
 based on a specified data, using curriculum learning. 
